@@ -24,7 +24,7 @@ If you have any questions, you can find us in the at @HighGroundVision
 
 ## Authors and Acknowledgements
 
-Mango is maintained and development is sponsored by [HGV](www.highgroundvision.com), a leading Dota 2 data visualization and analysis web site. Manta wouldn't exist without the efforts of a number of people:
+Mango is maintained and development is sponsored by [HGV](http://www.highgroundvision.com), a leading Dota 2 data visualization and analysis web site. Manta wouldn't exist without the efforts of a number of people:
 
 * [Jason Coene](https://github.com/jcoene) built Dotabuff's Source 2 parser [manta](https://github.com/dotabuff/manta).
 * [Robin Dietrich](https://github.com/invokr) built the C++ parser [Alice](https://github.com/AliceStats/Alice).
