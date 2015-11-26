@@ -7,12 +7,12 @@ Uses [dotabuff/manta](https://github.com/dotabuff/manta) to prase replay files f
 **Project Status:**
 
 - Main web server is online. Yippy!
-- Need to pipe in url parameter to get replay files from.
-- Validate current Json structure for best load / prase performance.
+- Need to pipe in URL parameter to get replay files from.
+- Validate current JSON structure for best load / parse performance.
 
 ## Getting Started
 
-Mango will return json array of events. Each event is timestamped with the game time and each event has a type. You will need to prase each event or event of speific types and decide how you're going to use it.
+Mango will return JSON array of events. Each event is timestamped with the game time and each event has a type. You will need to parse each event or event of specific types and decide how you're going to use it.
 
 ## License
 
