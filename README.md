@@ -8,8 +8,24 @@ Uses [dotabuff/manta](https://github.com/dotabuff/manta) to prase replay files f
 
 - Main web server is online. Yippy!
 - Need to pipe in url parameter to get replay files from.
-- Validate Json Structure for best load / prase conditions.
+- Validate current Json structure for best load / prase performance.
 
 ## Getting Started
 
-Manta will return json array of events. Each event is timestamped with the game time and each event has a type. You will need to prase each event or event of speific types and decide how you're going to use it.
+Mango will return json array of events. Each event is timestamped with the game time and each event has a type. You will need to prase each event or event of speific types and decide how you're going to use it.
+
+## License
+
+GNUv2 see the LICENSE file.
+
+## Help
+
+If you have any questions, you can find us in the at @HighGroundVision
+
+## Authors and Acknowledgements
+
+Mango is maintained and development is sponsored by [HGV](www.highgroundvision.com), a leading Dota 2 data visualization and analysis web site. Manta wouldn't exist without the efforts of a number of people:
+
+* [Jason Coene](https://github.com/jcoene) built Dotabuff's Source 2 parser [manta](https://github.com/dotabuff/manta).
+* [Robin Dietrich](https://github.com/invokr) built the C++ parser [Alice](https://github.com/AliceStats/Alice).
+* [](https://github.com/howardchung) built yasp parser [yasp](https://github.com/yasp-dota/yasp).
