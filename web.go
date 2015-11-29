@@ -15,50 +15,7 @@ import (
 )
 
 func hello(w http.ResponseWriter, r *http.Request) {
-    // Replay Viewer?
-    
-    // CDOTA_BaseNPC_Building
-    // CDOTA_BaseNPC_Tower
-    // CDOTA_BaseNPC_Barracks
-    // CDOTA_Unit_Fountain
-        // contains current health
-        // which is what? [team, position]
-    // CDOTA_BaseNPC_Creep_Lane
-    // CDOTA_BaseNPC_Creep_Neutral
-        // contains current health
-        // contains current position
-        // m_iUnitNameIndex => stringtable for name 
-    // CDOTA_Unit_Hero_...
-        // contains current health
-        // contains current position
-
 	fmt.Fprintf(w, "Online")
-}
-
-func parsePacketEntity(w http.ResponseWriter, r *http.Request) {
-    matchId := r.URL.Query().Get("matchId")
-    
-    if matchId != "" {
-        filename := matchId + ".dem"
-        
-        p, _ := manta.NewParserFromFile(filename)
-        
-        p.OnPacketEntity(func(pe *manta.PacketEntity, pet manta.EntityEventType) error {
-           
-            if strings.HasPrefix(pe.ClassName,"CDOTA_Unit_Hero") && pet == manta.EntityEventType_Create {
-                json, _ := json. MarshalIndent(pe, "", "\t")
-                fmt.Fprintf(w, "%s", json)
-            }
-            
-            return nil
-        })
-        
-        p.Start() // Start parsing the replay!
-
-    } else {
-        http.Error(w, "missing param matchId", http.StatusBadRequest)
-        return
-    }
 }
 
 func parseLog(w http.ResponseWriter, r *http.Request) {
@@ -530,13 +487,12 @@ func parseLog(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	http.HandleFunc("/", hello)
-    http.HandleFunc("/log", parseLog)
-    http.HandleFunc("/entities", parsePacketEntity)
+	http.HandleFunc("/log", parseLog)
 
-    port := "3001"
-    if os.Getenv("HTTP_PLATFORM_PORT") != "" {
-        port = os.Getenv("HTTP_PLATFORM_PORT")
-    }
+	port := "3001"
+		if os.Getenv("HTTP_PLATFORM_PORT") != "" {
+		port = os.Getenv("HTTP_PLATFORM_PORT")
+	}
 
 	http.ListenAndServe(":"+port, nil)
 }
