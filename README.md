@@ -16,7 +16,7 @@ Mango will return JSON array of events. Each event is timestamped with the game 
 
 ## License
 
-GNUv2 see the LICENSE file.
+See the LICENSE file.
 
 ## Help
 
