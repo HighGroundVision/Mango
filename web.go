@@ -21,9 +21,11 @@ func hello(w http.ResponseWriter, r *http.Request) {
 func parseLog(w http.ResponseWriter, r *http.Request) {
     switch r.Method {
 	case "POST":
-		form, _ := r.MultipartReader(); 
+	form, _ := r.MultipartReader(); 
         part, _ := form.NextPart(); 
         demoFile, _ := ioutil.ReadAll(part); 
+        
+        w.Header().Set("Content-Type", "application/json")
 		
         var gameTime time.Duration
         var preGameStartTime time.Duration
