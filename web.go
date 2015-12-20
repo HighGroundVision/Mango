@@ -3,10 +3,10 @@ package main
 //https://azure.microsoft.com/en-gb/blog/running-go-applications-on-azure-app-service/
 
 import (
-    "encoding/json"
     "strconv"
     "fmt"
     "net/http"
+    "io/ioutil"
     "os" 
     "time"
     "strings"
@@ -482,7 +482,7 @@ func parseLog(w http.ResponseWriter, r *http.Request) {
         fmt.Fprintf(w, "{\"type\":1,\"elapsed\":%s,\"pregame_start\":%s,\"game_start\":%s,\"game_end\":%s}]", elapsed, preGameStartTime,gameStartTime,gameEndTime)
 
 	default:
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Post the replay file you wish to parse.", http.StatusMethodNotAllowed)
         return
 	}
 }
