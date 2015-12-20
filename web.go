@@ -19,9 +19,12 @@ func hello(w http.ResponseWriter, r *http.Request) {
 }
 
 func parseLog(w http.ResponseWriter, r *http.Request) {
-    matchId := r.URL.Query().Get("matchId")
-    
-    if matchId != "" {
+    switch r.Method {
+	case "POST":
+		form, _ := r.MultipartReader(); 
+        part, _ := form.NextPart(); 
+        demoFile, _ := ioutil.ReadAll(part); 
+		
         var gameTime time.Duration
         var preGameStartTime time.Duration
         var gameStartTime time.Duration
@@ -42,8 +45,7 @@ func parseLog(w http.ResponseWriter, r *http.Request) {
         var heroes map[int]int32
         heroes = make(map[int]int32)
         
-        filename := matchId + ".dem"
-        p, _ := manta.NewParserFromFile(filename)
+        p, _ := manta.NewParser(demoFile)
         
         p.OnPacketEntity(func(pe *manta.PacketEntity, pet manta.EntityEventType) error {
             
@@ -77,7 +79,7 @@ func parseLog(w http.ResponseWriter, r *http.Request) {
                             deaths, _ := pe.FetchInt32("m_vecPlayerTeamData.000" + strconv.Itoa(i) + ".m_iDeaths")
                             kills, _ := pe.FetchInt32("m_vecPlayerTeamData.000" + strconv.Itoa(i) + ".m_iKills")
                             
-                            fmt.Fprintf(w, "{\"type\":\"UNIT_SUMMARY\",\"time\":\"%s\",\"hero\":%d,\"level\":%d,\"kills\":%d,\"deaths\":%d,\"assists\":%d},", gameTime, heroId,level, kills, deaths, assists)
+                            fmt.Fprintf(w, "{\"type\":2,\"time\":\"%s\",\"hero\":%d,\"level\":%d,\"kills\":%d,\"deaths\":%d,\"assists\":%d},", gameTime, heroId,level, kills, deaths, assists)
                         }
                     }
                 }
@@ -112,7 +114,7 @@ func parseLog(w http.ResponseWriter, r *http.Request) {
                             gold, _ := pe.FetchInt32("m_vecDataTeam.000" + strconv.Itoa(i) + ".m_iTotalEarnedGold")
                             xp, _ := pe.FetchInt32("m_vecDataTeam.000" + strconv.Itoa(i) + ".m_iTotalEarnedXP")
                             
-                            fmt.Fprintf(w, "{\"type\":\"UNIT_ECOM\",\"time\":\"%s\",\"hero\":%d,\"healing\":%d,\"stuns\":%d,\"buyback\":%d,\"lasthits\":%d,\"denies\":%d,\"misses\":%d,\"nearby_creeps\":%d,\"gold_creeps\":%d,\"gold_heroes\":%d,\"gold_income\":%d,\"gold_reliable\":%d,\"gold_unreliable\":%d,\"gold_shared\":%d,\"gold\":%d,\"xp\":%d},", gameTime, heroId, healing,stuns,buybackCooldown,lastHits,denies,missCount,nearbyCreepCount,creepGold,heroGold,incomeGold,reliableGold,unreliableGold,sharedGold,gold,xp)
+                            fmt.Fprintf(w, "{\"type\":3,\"time\":\"%s\",\"hero\":%d,\"healing\":%d,\"stuns\":%d,\"buyback\":%d,\"lasthits\":%d,\"denies\":%d,\"misses\":%d,\"nearby_creeps\":%d,\"gold_creeps\":%d,\"gold_heroes\":%d,\"gold_income\":%d,\"gold_reliable\":%d,\"gold_unreliable\":%d,\"gold_shared\":%d,\"gold\":%d,\"xp\":%d},", gameTime, heroId, healing,stuns,buybackCooldown,lastHits,denies,missCount,nearbyCreepCount,creepGold,heroGold,incomeGold,reliableGold,unreliableGold,sharedGold,gold,xp)
                         }
                     }
                 }
@@ -132,7 +134,7 @@ func parseLog(w http.ResponseWriter, r *http.Request) {
                         x, _ := pe.Fetch("CBodyComponentBaseAnimatingOverlay.m_cellX")
                         y, _ := pe.Fetch("CBodyComponentBaseAnimatingOverlay.m_cellY")
                     
-                        fmt.Fprintf(w, "{\"type\":\"UNIT_POSITION\",\"time\":\"%s\",\"hero\":%d,\"x\":%d,\"y\":%d},", gameTime, heroId, x, y)    
+                        fmt.Fprintf(w, "{\"type\":4,\"time\":\"%s\",\"hero\":%d,\"x\":%d,\"y\":%d},", gameTime, heroId, x, y)    
                     }
                 }
             }
@@ -143,7 +145,7 @@ func parseLog(w http.ResponseWriter, r *http.Request) {
                 ownerId, _ := pe.Fetch("m_hOwnerEntity")
                 heroId := owners[ownerId.(uint32)]
                 
-                fmt.Fprintf(w, "{\"type\":\"WARD_OBSERVER\",\"time\":\"%s\",\"x\":%d,\"y\":%d,\"hero\":%d},", gameTime, x, y, heroId)
+                fmt.Fprintf(w, "{\"type\":5,\"time\":\"%s\",\"x\":%d,\"y\":%d,\"hero\":%d},", gameTime, x, y, heroId)
             }
             
             if pe.ClassName == "CDOTA_NPC_Observer_Ward_TrueSight" && pet == manta.EntityEventType_Create {
@@ -152,14 +154,14 @@ func parseLog(w http.ResponseWriter, r *http.Request) {
                 ownerId, _ := pe.Fetch("m_hOwnerEntity")
                 heroId := owners[ownerId.(uint32)]
                 
-                fmt.Fprintf(w, "{\"type\":\"WARD_SENTRY\",\"time\":\"%s\",\"x\":%d,\"y\":%d,\"hero\":%d},", gameTime, x, y, heroId)
+                fmt.Fprintf(w, "{\"type\":6,\"time\":\"%s\",\"x\":%d,\"y\":%d,\"hero\":%d},", gameTime, x, y, heroId)
             } 
             
             return nil
         })
 
         p.Callbacks.OnCUserMessageSayText2(func(m *dota.CUserMessageSayText2) error {
-            fmt.Fprintf(w, "{\"type\":\"CHAT\",\"time\":\"%s\",\"player\":\"%s\",\"said\":\"%s\"},", gameTime, m.GetParam1(), m.GetParam2())
+            fmt.Fprintf(w, "{\"type\":7,\"time\":\"%s\",\"player\":\"%s\",\"said\":\"%s\"},", gameTime, m.GetParam1(), m.GetParam2())
             return nil
         })
         
@@ -176,21 +178,21 @@ func parseLog(w http.ResponseWriter, r *http.Request) {
                 case dota.DOTA_CHAT_MESSAGE_CHAT_MESSAGE_BARRACKS_KILL:
                     //They go in incremental powers of 2, starting by the Dire side to the Dire Side, Bottom to Top, Melee to Ranged
                     //ex: Bottom Melee Dire Rax = 1 and Top Ranged Radiant Rax = 2048.
-                    fmt.Fprintf(w, "{\"type\":\"BARRACKS\",\"time\":\"%s\",\"barracks\":%d,\"player\":%d},", gameTime, e.GetValue(), e.GetPlayerid_1())
+                    fmt.Fprintf(w, "{\"type\":8,\"time\":\"%s\",\"barracks\":%d,\"player\":%d},", gameTime, e.GetValue(), e.GetPlayerid_1())
                     
                 case dota.DOTA_CHAT_MESSAGE_CHAT_MESSAGE_TOWER_KILL:
                     //player1 = slot of player who killed tower (-1 if nonplayer)
                     //value (2/3 radiant/dire killed tower, recently 0/1?)
-                    fmt.Fprintf(w, "{\"type\":\"TOWER_KILL\",\"time\":\"%s\",\"tower\":%d,\"player\":%d},", gameTime, e.GetValue(), e.GetPlayerid_1())
+                    fmt.Fprintf(w, "{\"type\":9,\"time\":\"%s\",\"tower\":%d,\"player\":%d},", gameTime, e.GetValue(), e.GetPlayerid_1())
                 
                 case dota.DOTA_CHAT_MESSAGE_CHAT_MESSAGE_TOWER_DENY:
-                    fmt.Fprintf(w, "{\"type\":\"TOWER_DENY\",\"time\":\"%s\",\"tower\":%d,\"player\":%d},", gameTime, e.GetValue(), e.GetPlayerid_1())
+                    fmt.Fprintf(w, "{\"type\":10,\"time\":\"%s\",\"tower\":%d,\"player\":%d},", gameTime, e.GetValue(), e.GetPlayerid_1())
                     
                 case dota.DOTA_CHAT_MESSAGE_CHAT_MESSAGE_EFFIGY_KILL:
-                    fmt.Fprintf(w, "{\"type\":\"EFFIGY\",\"time\":\"%s\",\"player\":%d},", gameTime, e.GetPlayerid_1())
+                    fmt.Fprintf(w, "{\"type\":11,\"time\":\"%s\",\"player\":%d},", gameTime, e.GetPlayerid_1())
                     
                 case dota.DOTA_CHAT_MESSAGE_CHAT_MESSAGE_FIRSTBLOOD:
-                    fmt.Fprintf(w, "{\"type\":\"FIRSTBLOOD\",\"time\":\"%s\",\"player\":%d},", gameTime, e.GetPlayerid_1())
+                    fmt.Fprintf(w, "{\"type\":12,\"time\":\"%s\",\"player\":%d},", gameTime, e.GetPlayerid_1())
                     
                 case dota.DOTA_CHAT_MESSAGE_CHAT_MESSAGE_STREAK_KILL:
                     // covered by combat log
@@ -198,44 +200,44 @@ func parseLog(w http.ResponseWriter, r *http.Request) {
                 case dota.DOTA_CHAT_MESSAGE_CHAT_MESSAGE_BUYBACK:
                     // covered by combat log
                     
-                case dota.DOTA_CHAT_MESSAGE_CHAT_MESSAGE_AEGIS:
-                    //player1 = slot who picked up/denied/stole aegis
-                    fmt.Fprintf(w, "{\"type\":\"AEGIS_TAKEN\",\"time\":\"%s\",\"player\":%d},", gameTime, e.GetPlayerid_1())
-                    
-                case dota.DOTA_CHAT_MESSAGE_CHAT_MESSAGE_AEGIS_STOLEN:
-                    fmt.Fprintf(w, "{\"type\":\"AEGIS_STOLEN\",\"time\":\"%s\",\"player\":%d},", gameTime, e.GetPlayerid_1())
-                    
-                case dota.DOTA_CHAT_MESSAGE_CHAT_MESSAGE_DENIED_AEGIS:
-                    fmt.Fprintf(w, "{\"type\":\"AEGIS_DENIED\",\"time\":\"%s\",\"player\":%d},", gameTime, e.GetPlayerid_1())
-                    
                 case dota.DOTA_CHAT_MESSAGE_CHAT_MESSAGE_ROSHAN_KILL:
                     //player1 = team that killed roshan? (2/3)
-                    fmt.Fprintf(w, "{\"type\":\"ROSHAN\",\"time\":\"%s\",\"team\":%d,\"value\":%d},", gameTime, e.GetPlayerid_1(), e.GetValue())
+                    fmt.Fprintf(w, "{\"type\":13,\"time\":\"%s\",\"team\":%d,\"value\":%d},", gameTime, e.GetPlayerid_1(), e.GetValue())
+                    
+                case dota.DOTA_CHAT_MESSAGE_CHAT_MESSAGE_AEGIS:
+                    //player1 = slot who picked up/denied/stole aegis
+                    fmt.Fprintf(w, "{\"type\":14,\"time\":\"%s\",\"player\":%d},", gameTime, e.GetPlayerid_1())
+                    
+                case dota.DOTA_CHAT_MESSAGE_CHAT_MESSAGE_AEGIS_STOLEN:
+                    fmt.Fprintf(w, "{\"type\":15,\"time\":\"%s\",\"player\":%d},", gameTime, e.GetPlayerid_1())
+                    
+                case dota.DOTA_CHAT_MESSAGE_CHAT_MESSAGE_DENIED_AEGIS:
+                    fmt.Fprintf(w, "{\"type\":16,\"time\":\"%s\",\"player\":%d},", gameTime, e.GetPlayerid_1())
                     
                 case dota.DOTA_CHAT_MESSAGE_CHAT_MESSAGE_COURIER_LOST:
                     //player1 = team that lost courier (2/3)
-                    fmt.Fprintf(w, "{\"type\":\"COURIER_LOST\",\"time\":\"%s\",\"team\":%d},", gameTime, e.GetPlayerid_1())
+                    fmt.Fprintf(w, "{\"type\":17,\"time\":\"%s\",\"team\":%d},", gameTime, e.GetPlayerid_1())
                     
                 case dota.DOTA_CHAT_MESSAGE_CHAT_MESSAGE_COURIER_RESPAWNED:
-                    fmt.Fprintf(w, "{\"type\":\"COURIER_RESPAWNED\",\"time\":\"%s\",\"team\":%d},", gameTime, e.GetPlayerid_1())
+                    fmt.Fprintf(w, "{\"type\":18,\"time\":\"%s\",\"team\":%d},", gameTime, e.GetPlayerid_1())
                     
                 case dota.DOTA_CHAT_MESSAGE_CHAT_MESSAGE_GLYPH_USED:
                     // team that used glyph (2/3, or 0/1) ?
-                    fmt.Fprintf(w, "{\"type\":\"GLYPHED\",\"time\":\"%s\",\"team\":%d},", gameTime, e.GetPlayerid_1())
+                    fmt.Fprintf(w, "{\"type\":19,\"time\":\"%s\",\"team\":%d},", gameTime, e.GetPlayerid_1())
                     
                 case dota.DOTA_CHAT_MESSAGE_CHAT_MESSAGE_ITEM_PURCHASE:
                     // Not usefull dose not include all PURCHASES
                     
                 case dota.DOTA_CHAT_MESSAGE_CHAT_MESSAGE_RUNE_PICKUP:
-                    fmt.Fprintf(w, "{\"type\":\"RUNE_PICKUP\",\"time\":\"%s\",\"player\":%d,\"rune\":%d},", gameTime, e.GetPlayerid_1(), e.GetValue())
+                    fmt.Fprintf(w, "{\"type\":20,\"time\":\"%s\",\"player\":%d,\"rune\":%d},", gameTime, e.GetPlayerid_1(), e.GetValue())
                     //"0": "Double Damage", "1": "Haste", "2": "Illusion", "3": "Invisibility", "4": "Regeneration", "4": "Bounty"
                     
                 case dota.DOTA_CHAT_MESSAGE_CHAT_MESSAGE_RUNE_BOTTLE:
-                    fmt.Fprintf(w, "{\"type\":\"RUNE_BOTTLE\",\"time\":\"%s\",\"player\":%d,\"rune\":%d},", gameTime, e.GetPlayerid_1(), e.GetValue())
+                    fmt.Fprintf(w, "{\"type\":21,\"time\":\"%s\",\"player\":%d,\"rune\":%d},", gameTime, e.GetPlayerid_1(), e.GetValue())
                     //"0": "Double Damage", "1": "Haste", "2": "Illusion", "3": "Invisibility", "4": "Regeneration", "4": "Bounty"
                     
                 case dota.DOTA_CHAT_MESSAGE_CHAT_MESSAGE_SUPER_CREEPS:
-                    fmt.Fprintf(w, "{\"type\":\"GLYPHED\",\"time\":\"%s\",\"team\":%d},", gameTime, e.GetPlayerid_1())
+                    fmt.Fprintf(w, "{\"type\":22,\"time\":\"%s\",\"team\":%d},", gameTime, e.GetPlayerid_1())
                     
                 case dota.DOTA_CHAT_MESSAGE_CHAT_MESSAGE_CONNECT:
                 case dota.DOTA_CHAT_MESSAGE_CHAT_MESSAGE_DISCONNECT:
@@ -249,7 +251,7 @@ func parseLog(w http.ResponseWriter, r *http.Request) {
                     // Maybe at some point?
                     
                 case dota.DOTA_CHAT_MESSAGE_CHAT_MESSAGE_INTHEBAG:
-                    fmt.Fprintf(w, "{\"type\":\"INTHEBAG\",\"time\":\"%s\",\"player\":%d},", gameTime, e.GetPlayerid_1())
+                    fmt.Fprintf(w, "{\"type\":23,\"time\":\"%s\",\"player\":%d},", gameTime, e.GetPlayerid_1())
                     
                 case dota.DOTA_CHAT_MESSAGE_CHAT_MESSAGE_TAUNT:
                     // Is this needed?
@@ -288,7 +290,7 @@ func parseLog(w http.ResponseWriter, r *http.Request) {
                     
                     value := m.GetValue()
                     
-                    fmt.Fprintf(w, "{\"type\":\"DAMAGE\",\"time\":\"%s\",\"iat\":%t,\"iah\":%t,\"iti\":%t,\"ith\":%t,\"ivr\":%t,\"ivd\":%t,\"itb\":%t,\"attacker\":\"%s\",\"target\":\"%s\",\"target_source\":\"%s\",\"damage_source\":\"%s\",\"inflictor\":\"%s\",\"value\":%d},", gameTime, iat, iah,iti,ith,ivr,ivd,itb,attacker,target,target_source,damage_source,inflictor,value)
+                    fmt.Fprintf(w, "{\"type\":24,\"time\":\"%s\",\"iat\":%t,\"iah\":%t,\"iti\":%t,\"ith\":%t,\"ivr\":%t,\"ivd\":%t,\"itb\":%t,\"attacker\":\"%s\",\"target\":\"%s\",\"target_source\":\"%s\",\"damage_source\":\"%s\",\"inflictor\":\"%s\",\"value\":%d},", gameTime, iat, iah,iti,ith,ivr,ivd,itb,attacker,target,target_source,damage_source,inflictor,value)
                     
                 case dota.DOTA_COMBATLOG_TYPES_DOTA_COMBATLOG_HEAL:
                     iat := m.GetIsAttackerIllusion()
@@ -315,7 +317,7 @@ func parseLog(w http.ResponseWriter, r *http.Request) {
                     inflictor, _ := p.LookupStringByIndex("CombatLogNames", int32(inflictor_name))
                     
                     value := m.GetValue()
-                    fmt.Fprintf(w, "{\"type\":\"HEAL\",\"time\":\"%s\",\"iat\":%t,\"iah\":%t,\"iti\":%t,\"ith\":%t,\"ivr\":%t,\"ivd\":%t,\"itb\":%t,\"attacker\":\"%s\",\"target\":\"%s\",\"target_source\":\"%s\",\"damage_source\":\"%s\",\"inflictor\":\"%s\",\"value\":%d},", gameTime, iat, iah,iti,ith,ivr,ivd,itb,attacker,target,target_source,damage_source,inflictor,value)
+                    fmt.Fprintf(w, "{\"type\":25,\"time\":\"%s\",\"iat\":%t,\"iah\":%t,\"iti\":%t,\"ith\":%t,\"ivr\":%t,\"ivd\":%t,\"itb\":%t,\"attacker\":\"%s\",\"target\":\"%s\",\"target_source\":\"%s\",\"damage_source\":\"%s\",\"inflictor\":\"%s\",\"value\":%d},", gameTime, iat, iah,iti,ith,ivr,ivd,itb,attacker,target,target_source,damage_source,inflictor,value)
                     
                 case dota.DOTA_COMBATLOG_TYPES_DOTA_COMBATLOG_DEATH:
                     iat := m.GetIsAttackerIllusion()
@@ -338,7 +340,7 @@ func parseLog(w http.ResponseWriter, r *http.Request) {
                     damage_source_name := m.GetDamageSourceName()
                     damage_source, _ := p.LookupStringByIndex("CombatLogNames", int32(damage_source_name))
                     
-                    fmt.Fprintf(w, "{\"type\":\"DEATH\",\"time\":\"%s\",\"iat\":%t,\"iah\":%t,\"iti\":%t,\"ith\":%t,\"ivr\":%t,\"ivd\":%t,\"itb\":%t,\"attacker\":\"%s\",\"target\":\"%s\",\"target_source\":\"%s\",\"damage_source\":\"%s\"},", gameTime, iat, iah,iti,ith,ivr,ivd,itb,attacker,target,target_source,damage_source)
+                    fmt.Fprintf(w, "{\"type\":26,\"time\":\"%s\",\"iat\":%t,\"iah\":%t,\"iti\":%t,\"ith\":%t,\"ivr\":%t,\"ivd\":%t,\"itb\":%t,\"attacker\":\"%s\",\"target\":\"%s\",\"target_source\":\"%s\",\"damage_source\":\"%s\"},", gameTime, iat, iah,iti,ith,ivr,ivd,itb,attacker,target,target_source,damage_source)
                     
                 case dota.DOTA_COMBATLOG_TYPES_DOTA_COMBATLOG_ABILITY:
                     iat := m.GetIsAttackerIllusion()
@@ -354,7 +356,7 @@ func parseLog(w http.ResponseWriter, r *http.Request) {
                     
                     ability_level := m.GetAbilityLevel()
                     
-                    fmt.Fprintf(w, "{\"type\":\"ABILITY\",\"time\":\"%s\",\"iat\":%t,\"iah\":%t,\"ivr\":%t,\"ivd\":%t,\"attacker\":\"%s\",\"inflictor\":\"%s\",\"ability_level\":%d},", gameTime, iat, iah,ivr,ivd,attacker,inflictor,ability_level)
+                    fmt.Fprintf(w, "{\"type\":27,\"time\":\"%s\",\"iat\":%t,\"iah\":%t,\"ivr\":%t,\"ivd\":%t,\"attacker\":\"%s\",\"inflictor\":\"%s\",\"ability_level\":%d},", gameTime, iat, iah,ivr,ivd,attacker,inflictor,ability_level)
                     
                 case dota.DOTA_COMBATLOG_TYPES_DOTA_COMBATLOG_ITEM:
                     attacker_name := m.GetAttackerName()
@@ -365,7 +367,7 @@ func parseLog(w http.ResponseWriter, r *http.Request) {
                     
                     ability_level := m.GetAbilityLevel()
                     
-                    fmt.Fprintf(w, "{\"type\":\"ITEM\",\"time\":\"%s\",\"player\":\"%s\",\"item\":\"%s\",\"level\":%d},",  gameTime, attacker, inflictor, ability_level)
+                    fmt.Fprintf(w, "{\"type\":28,\"time\":\"%s\",\"player\":\"%s\",\"item\":\"%s\",\"level\":%d},",  gameTime, attacker, inflictor, ability_level)
                     
                 case dota.DOTA_COMBATLOG_TYPES_DOTA_COMBATLOG_PURCHASE:
                     target_name := m.GetTargetName()
@@ -374,13 +376,13 @@ func parseLog(w http.ResponseWriter, r *http.Request) {
                     value := m.GetValue()
                     item, _ := p.LookupStringByIndex("CombatLogNames", int32(value))
                     
-                    fmt.Fprintf(w, "{\"type\":\"PURCHASE\",\"time\":\"%s\",\"player\":\"%s\",\"item\":%s},", gameTime, target, item)
+                    fmt.Fprintf(w, "{\"type\":29,\"time\":\"%s\",\"player\":\"%s\",\"item\":%s},", gameTime, target, item)
                     
                 case dota.DOTA_COMBATLOG_TYPES_DOTA_COMBATLOG_BUYBACK:
                     value := m.GetValue()
                     source, _ := p.LookupStringByIndex("CombatLogNames", int32(value))
                     
-                    fmt.Fprintf(w, "{\"type\":\"BUYBACK\",\"time\": %s,\"player\": %s},", gameTime, source)
+                    fmt.Fprintf(w, "{\"type\":30,\"time\": %s,\"player\": %s},", gameTime, source)
                     
                 case dota.DOTA_COMBATLOG_TYPES_DOTA_COMBATLOG_GOLD:
                     amount := m.GetValue()
@@ -394,7 +396,7 @@ func parseLog(w http.ResponseWriter, r *http.Request) {
                     target_source_name := m.GetTargetSourceName()
                     target_source, _ := p.LookupStringByIndex("CombatLogNames", int32(target_source_name))
         
-                    fmt.Fprintf(w, "{\"type\":\"GOLD\",\"time\":\"%s\",\"target\":\"%s\",\"targetsource\":\"%s\",\"reason\":%d,\"amount\":%d},", gameTime, target, target_source, reason, amount)
+                    fmt.Fprintf(w, "{\"type\":31,\"time\":\"%s\",\"target\":\"%s\",\"targetsource\":\"%s\",\"reason\":%d,\"amount\":%d},", gameTime, target, target_source, reason, amount)
                     
                 case dota.DOTA_COMBATLOG_TYPES_DOTA_COMBATLOG_XP:
                     amount := m.GetValue()
@@ -404,7 +406,7 @@ func parseLog(w http.ResponseWriter, r *http.Request) {
                     target_name := m.GetTargetName()
                     target, _ := p.LookupStringByIndex("CombatLogNames", int32(target_name))
                     
-                    fmt.Fprintf(w, "{\"type\":\"XP\",\"time\": %s,\"target\": %s,\"reason\":%d,\"amount\":%d},", gameTime, target, reason, amount)
+                    fmt.Fprintf(w, "{\"type\":32,\"time\": %s,\"target\": %s,\"reason\":%d,\"amount\":%d},", gameTime, target, reason, amount)
                     
                 case dota.DOTA_COMBATLOG_TYPES_DOTA_COMBATLOG_TEAM_BUILDING_KILL:
                     target_name := m.GetTargetName()
@@ -412,7 +414,7 @@ func parseLog(w http.ResponseWriter, r *http.Request) {
                     
                     value := m.GetValue()
                       
-                    fmt.Fprintf(w, "{\"type\":\"BUILDING_KILL\",\"time\": %s,\"target\": %s,\"value\":%d},", gameTime, target, value)
+                    fmt.Fprintf(w, "{\"type\":33,\"time\": %s,\"target\": %s,\"value\":%d},", gameTime, target, value)
         
                 case dota.DOTA_COMBATLOG_TYPES_DOTA_COMBATLOG_NEUTRAL_CAMP_STACK:
                     // Not used?
@@ -441,7 +443,7 @@ func parseLog(w http.ResponseWriter, r *http.Request) {
                     value := m.GetValue()
                     //"2": "Double Kill", "3": "Triple Kill", "4": "Ultra Kill", "5": "Rampage"
                     
-                    fmt.Fprintf(w, "{\"type\":\"MULTIKILL\",\"time\":\"%s\",\"attacker\":\"%s\",\"target\":\"%s\",\"target_source\":\"%s\",\"value\":%d},", 
+                    fmt.Fprintf(w, "{\"type\":34,\"time\":\"%s\",\"attacker\":\"%s\",\"target\":\"%s\",\"target_source\":\"%s\",\"value\":%d},", 
                         gameTime, 
                         attacker,
                         target,
@@ -461,7 +463,7 @@ func parseLog(w http.ResponseWriter, r *http.Request) {
                     value := m.GetValue()
                     //"3": "Killing Spree", "4": "Dominating","5": "Mega Kill", "6": "Unstoppable", "7": "Wicked Sick", "8": "Monster Kill", "9": "Godlike", "10": "Beyond Godlike"
    
-                    fmt.Fprintf(w, "{\"type\":\"KILLSTREAK\",\"time\":\"%s\",\"attacker\":\"%s\",\"target\":\"%s\",\"target_source\":\"%s\",\"value\":%d},", 
+                    fmt.Fprintf(w, "{\"type\":35,\"time\":\"%s\",\"attacker\":\"%s\",\"target\":\"%s\",\"target_source\":\"%s\",\"value\":%d},", 
                         gameTime, 
                         attacker,
                         target,
@@ -474,25 +476,25 @@ func parseLog(w http.ResponseWriter, r *http.Request) {
         })
         
         start := time.Now()
-        fmt.Fprintf(w, "[{\"type\":\"HEADER\",\"version\":2,\"date\":\"%s\"},", start)
+        fmt.Fprintf(w, "[{\"type\":0,\"version\":2,\"date\":\"%s\"},", start)
         p.Start() 
         elapsed := time.Since(start)
-        fmt.Fprintf(w, "{\"type\":\"TIME\",\"elapsed\":%s,\"pregame_start\":%s,\"game_start\":%s,\"game_end\":%s}]", elapsed, preGameStartTime,gameStartTime,gameEndTime)
-       
-    } else {
-        http.Error(w, "missing param matchId", http.StatusBadRequest)
+        fmt.Fprintf(w, "{\"type\":1,\"elapsed\":%s,\"pregame_start\":%s,\"game_start\":%s,\"game_end\":%s}]", elapsed, preGameStartTime,gameStartTime,gameEndTime)
+
+	default:
+		http.Error(w, err.Error(), http.StatusInternalServerError)
         return
-    }
+	}
 }
 
 func main() {
 	http.HandleFunc("/", hello)
-	http.HandleFunc("/log", parseLog)
+    http.HandleFunc("/log", parseLog)
 
-	port := "3001"
-		if os.Getenv("HTTP_PLATFORM_PORT") != "" {
-		port = os.Getenv("HTTP_PLATFORM_PORT")
-	}
+    port := "3001"
+    if os.Getenv("HTTP_PLATFORM_PORT") != "" {
+        port = os.Getenv("HTTP_PLATFORM_PORT")
+    }
 
 	http.ListenAndServe(":"+port, nil)
 }
