@@ -25,7 +25,7 @@ func parseLog(w http.ResponseWriter, r *http.Request) {
         part, _ := form.NextPart(); 
         demoFile, _ := ioutil.ReadAll(part); 
         
-        w.Header().Set("Content-Type", "application/json")
+        //w.Header().Set("Content-Type", "application/json")
 		
         var gameTime time.Duration
         var preGameStartTime time.Duration
