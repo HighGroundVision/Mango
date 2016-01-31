@@ -18,12 +18,15 @@ func v1ParseLog(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "POST":
 
-	    form, _ := r.MultipartReader(); 
-        part, _ := form.NextPart(); 
-        demoFile, _ := ioutil.ReadAll(part); 
-        
-        //w.Header().Set("Content-Type", "application/json")
-		
+        var demoFile []byte
+        if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data;") {
+            form, _ := r.MultipartReader(); 
+            part, _ := form.NextPart(); 
+            demoFile, _ = ioutil.ReadAll(part); 
+        } else {
+            demoFile, _ = ioutil.ReadAll(r.Body);
+        }
+             
         var gameTime time.Duration
         var preGameStartTime time.Duration
         var gameStartTime time.Duration
@@ -43,6 +46,7 @@ func v1ParseLog(w http.ResponseWriter, r *http.Request) {
         
         var heroes map[int]int32
         heroes = make(map[int]int32)
+        
         
         p, _ := manta.NewParser(demoFile)
         
