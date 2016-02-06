@@ -1,6 +1,6 @@
 # Steam DOTA2 Source 2 Replay Parser Webserver
 
-**Build Status Placeholder**
+[![Build Status](https://travis-ci.org/HighGroundVision/Mango.svg?branch=master)](https://travis-ci.org/HighGroundVision/Mango)
 
 Uses [dotabuff/manta](https://github.com/dotabuff/manta) to prase replay files for Source 2 (Dota 2 Reborn) engine. (currently dose not support source 1 replays)
 
