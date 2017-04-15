@@ -443,7 +443,8 @@ func v1ParseLog(w http.ResponseWriter, r *http.Request) {
 }
 
 func everythingElse(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "Welcome to Mango, please post a replay to '/v1/parse' to get started.", http.StatusNotFound)
+    http.Redirect(w, r, "welcome.html", 301)
+	//http.Error(w, "Welcome to Mango, please post a replay to '/v1/parse' to get started.", http.StatusNotFound)
 	return
 }
 
